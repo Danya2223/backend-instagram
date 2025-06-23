@@ -1,33 +1,40 @@
-import { Injectable, Post } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostDocument, Posts } from './schema/post.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { validatePostOwnership } from './utils/post.validation';
 
 @Injectable()
 export class PostsService {
   constructor(
-      @InjectModel(Posts.name) private postModel: Model<PostDocument>
-    ){}
-  async create(createPostDto: CreatePostDto):Promise<Posts>{
-    const user = new this.postModel(createPostDto);
+    @InjectModel(Posts.name) private postModel: Model<PostDocument>
+  ) { }
+
+  async createPost(createPostDto: CreatePostDto, userId: string): Promise<Posts> {
+    const user = new this.postModel({ ...createPostDto, userId });
     return user.save();
   }
 
-  findAll() {
-    return `This action returns all posts`;
+  async getPostsByUser(userId: Types.ObjectId): Promise<Posts[]> {
+    const usersPost = await this.postModel.find({ userId: userId }).populate('userId');
+    return usersPost;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} post`;
+  async getOnePostByUser(postId: string, userId: Types.ObjectId): Promise<PostDocument | null> {
+    return this.postModel.findOne({ _id: postId, userId });
   }
 
-  update(id: number, updatePostDto: UpdatePostDto) {
-    return `This action updates a #${id} post`;
+  async editPost(updatePostDto: UpdatePostDto, userId: Types.ObjectId): Promise<Posts | null> {
+    const post = await this.getOnePostByUser(updatePostDto.postId, userId);
+    await validatePostOwnership(post, userId);
+    return this.postModel.findByIdAndUpdate({ _id: updatePostDto.postId, userId }, updatePostDto, { new: true },);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} post`;
+  async deletePost(postId: string, userId: Types.ObjectId): Promise<Posts | null> {
+    const post = await this.getOnePostByUser(postId, userId);
+    await validatePostOwnership(post, userId);
+    return this.postModel.findByIdAndDelete(post!._id);
   }
 }

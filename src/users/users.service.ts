@@ -1,36 +1,33 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { User, UserDocument } from './shema/user.schema';
-import mongoose, { Model, ObjectId, ObjectIdToString } from 'mongoose';
+import { User, UserDocument } from './schema/user.schema';
+import mongoose, { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { NotFoundError } from 'rxjs';
+import { validateUserFound } from './utils/users.validation'
+
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>
   ) { }
-  async create(createUserDto: CreateUserDto): Promise<User> {
+  
+  async createUser(createUserDto: CreateUserDto): Promise<User> {
     const user = new this.userModel(createUserDto);
     return user.save();
   }
 
-  findAll() {
-    return `This action returns all users`;
-  }
 
-  async getUserById(id: string): Promise<UserDocument> {
+  async getUserById(id: string): Promise<UserDocument | null> {
     const user = await this.userModel.findById(id);
-    if (!user) {
-      throw new NotFoundException("user not found")
-    }
+    validateUserFound(user)
     return user;
   }
 
   async followToUser(currentUserId: string, userGetFollowId: string) {
     if (currentUserId === userGetFollowId) {
-      throw new Error("user can do follow for iself")
+      throw new Error("user cannt do follow for yourself")
     }
 
     await this.getUserById(currentUserId)
@@ -52,7 +49,7 @@ export class UsersService {
 
   async unfollowToUser(currentUserId: string, userGetUnfollowId: string) {
     if (currentUserId === userGetUnfollowId) {
-      throw new Error("user can do unfollow for yorurelf")
+      throw new Error("user cannt do unfollow for yorurelf")
     }
     await this.getUserById(currentUserId)
     await this.getUserById(userGetUnfollowId);
@@ -71,17 +68,27 @@ export class UsersService {
 
   }
 
-  async getFollowers(userId: string): Promise<User[]> {
+  async getFollowers(userId: string): Promise<UserDocument[]> {
     const user = await this.userModel.findById(userId).populate('followers');
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-    return user.followers as unknown as User[];
+    validateUserFound(user)
+    return user.followers as unknown as UserDocument[];
   }
 
-
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
+  async getFollowing(userId: string): Promise<UserDocument[] | null> {
+    const user = await this.userModel.findById(userId).populate('following');
+    validateUserFound(user)
+    return user.following as unknown as UserDocument[];
   }
 
+  async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<UserDocument> {
+    const user = await this.userModel.findByIdAndUpdate(id, updateUserDto, { new: true });
+    validateUserFound(user)
+    return user;
+  }
+
+  async findByUserName(userName: string) {
+    return this.userModel.findOne({ userName: userName }).select('+password');
+  }
 }
+
+

@@ -1,26 +1,60 @@
 import { Injectable } from '@nestjs/common';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import * as bcrypt from 'bcrypt';
+import { RegisterAuthDto} from './dto/register.auth.dto';
+import { LoginAuthDto } from './dto/login.auth.dto';
+import { UsersService } from 'src/users/users.service';
+import { JwtService } from '@nestjs/jwt';
+import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { User } from 'src/users/schema/user.schema';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+    private usersService:UsersService,
+    private jwtService:JwtService
+  ){}
+
+  async register(registerAuthDto: RegisterAuthDto): Promise<User>{
+
+    const { email, password, userName } = registerAuthDto;
+
+    const existingUser = await this.usersService.findByUserName(userName);
+    if(existingUser){
+      throw new Error('User alraedy exist')
+    }
+
+    const hashPassword = await bcrypt.hash(password, 10);
+
+    const createUserDto: CreateUserDto = {
+      email,
+      password: hashPassword,
+      userName,
+    };
+
+    const user = await this.usersService.createUser(createUserDto);
+    return user;
   }
 
-  findAll() {
-    return `This action returns all auth`;
-  }
+  
+  async login(loginAuthDto: LoginAuthDto): Promise<{access_token:string}>{
+    const {username, password}= loginAuthDto
+    const user= await this.usersService.findByUserName(username);
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
+    if(!user){
+      throw new Error('user doesnt exist')
+    }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
+    console.log('data:', password);
+    console.log('hash:', user.password);
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if(! isPasswordValid){
+      throw new Error('worng password')
+    }
+
+    const payload ={ sub: user._id, userName:user.userName}
+
+    const token = this.jwtService.sign(payload);
+    return{access_token: token};
   }
 }
