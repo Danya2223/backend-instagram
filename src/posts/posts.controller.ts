@@ -28,11 +28,11 @@ export class PostsController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Put('edit')
-  async updatePost(@Body() updatePostDto: UpdatePostDto, @Req() req: Request,
+  @Put('edit/:postId')
+  async updatePost(@Param('postId') postId: string, @Body() updatePostDto: UpdatePostDto, @Req() req: Request,
   ) {
     const user = req.user as any;
-    return this.postsService.editPost( updatePostDto, user.userId);
+    return this.postsService.editPost( postId ,updatePostDto, user.userId);
   }
 
   @UseGuards(JwtAuthGuard)

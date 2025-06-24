@@ -44,9 +44,6 @@ export class AuthService {
       throw new Error('user doesnt exist')
     }
 
-    console.log('data:', password);
-    console.log('hash:', user.password);
-
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if(! isPasswordValid){
       throw new Error('worng password')

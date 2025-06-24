@@ -26,10 +26,10 @@ export class PostsService {
     return this.postModel.findOne({ _id: postId, userId });
   }
 
-  async editPost(updatePostDto: UpdatePostDto, userId: Types.ObjectId): Promise<Posts | null> {
-    const post = await this.getOnePostByUser(updatePostDto.postId, userId);
+  async editPost(postId:string,updatePostDto: UpdatePostDto, userId: Types.ObjectId): Promise<Posts | null> {
+    const post = await this.getOnePostByUser(postId, userId);
     await validatePostOwnership(post, userId);
-    return this.postModel.findByIdAndUpdate({ _id: updatePostDto.postId, userId }, updatePostDto, { new: true },);
+    return this.postModel.findByIdAndUpdate({ _id: postId, userId }, updatePostDto, { new: true },);
   }
 
   async deletePost(postId: string, userId: Types.ObjectId): Promise<Posts | null> {
