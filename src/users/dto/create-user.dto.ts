@@ -1,17 +1,23 @@
-import { IsNotEmpty } from "class-validator";
-import { ObjectId } from "mongoose";
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength, MinLength } from "class-validator";
+
 
 export class CreateUserDto {
-   @IsNotEmpty()
+
+    @IsString()
+    @IsNotEmpty()
     userName: string;
 
+    @IsEmail()
     @IsNotEmpty()
-    email:string;
+    email: string;
 
-   @IsNotEmpty()
-    password:string;
+    @MinLength(6)
+    @MaxLength(10)
+    @IsNotEmpty()
+    password: string;
 
-   @IsNotEmpty()
-    bio:string;
+    @IsString()
+    @IsOptional()
+    bio?: string;
 
 }
